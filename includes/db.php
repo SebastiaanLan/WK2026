@@ -4,10 +4,10 @@
 // ============================================
 // Pas de onderstaande gegevens aan indien nodig.
 
-$db_host = 'localhost';
+$db_host = 'db';
 $db_name = 'wk_poule';
 $db_user = 'root';
-$db_pass = '';
+$db_pass = 'root';
 
 try {
     $pdo = new PDO(

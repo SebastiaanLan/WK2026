@@ -13,60 +13,56 @@ $name   = '';
 $email  = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name     = trim($_POST['name']     ?? '');
-    $email    = trim($_POST['email']    ?? '');
-    $password = $_POST['password']      ?? '';
+    $name     = trim($_POST['name'] ?? '');
+    $email    = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
     $confirm  = $_POST['password_confirm'] ?? '';
 
-    // =============================================================
-    // TODO 1: VALIDATIE
-    // =============================================================
-    // Controleer of de velden correct zijn ingevuld en voeg eventuele
-    // foutmeldingen toe aan de $errors array.
-    //
-    // Vereisten:
-    //  - $name mag niet leeg zijn en moet minimaal 2 tekens lang zijn.
-    //  - $email mag niet leeg zijn en moet een geldig e-mailadres zijn
-    //    (tip: gebruik filter_var met FILTER_VALIDATE_EMAIL).
-    //  - $password moet minimaal 6 tekens lang zijn.
-    //  - $password en $confirm moeten gelijk zijn.
-    //
-    // Voorbeeld van een foutmelding toevoegen:
-    //   $errors[] = 'Naam is verplicht.';
-    // =============================================================
+    if (empty($name)) {
+        $errors[] = 'Naam is verplicht';
+    } elseif (strlen($name) <= 2) {
+        $errors[] = 'Naam moet minimaal 2 tekens hebben';
+    }
 
+    if (empty($email)) {
+        $errors[] = 'E-mail is verplicht';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'Dat is geen geldige email';
+    }
 
-    // =============================================================
-    // TODO 2: CONTROLEER OF E-MAIL AL BESTAAT
-    // =============================================================
-    // Alleen uitvoeren als er nog geen fouten zijn.
-    // Gebruik een prepared statement op de `users` tabel.
-    // Als het e-mailadres al bestaat, voeg dan een foutmelding toe
-    // aan de $errors array.
-    //
-    // Voorbeeld prepared statement:
-    //   $stmt = $pdo->prepare("?");
-    //   $stmt->execute([$?]);
-    //   if ($stmt->fetch()) { ... }
-    // =============================================================
+    if (empty($password)) {
+        $errors[] = 'Wachtwoord is verplicht';
+    } elseif (strlen($password) <= 6) {
+        $errors[] = 'Wachtwoord moet minimaal 6 tekens hebben';
+    } elseif ($password != $confirm) {
+        $errors[] = "Wachtwoord is niet hetzelfden";
+    }
 
+    $stmt = $pdo->prepare("
+        Select id from users
+        WHERE email = ?
+    ");
 
-    // =============================================================
-    // TODO 3: GEBRUIKER OPSLAAN
-    // =============================================================
-    // Alleen uitvoeren als $errors nog leeg is.
-    //
-    //  a) Hash het wachtwoord met password_hash():
-    //       $hashed = password_hash($password, PASSWORD_DEFAULT);
-    //
-    //  b) Voeg de gebruiker toe met een INSERT statement:
-    //       INSERT INTO users (name, email, password) ???
-    //
-    //  c) Stuur de gebruiker door naar login.php met een succes-parameter:
-    //       header('Location: ');
-    //       exit;
-    // =============================================================
+    $stmt->execute([$email]);
 
+    if ($stmt->fetch()) {
+        $errors[] = "Dit e-mailadres is al in gebruik";
+    }
+
+    if (empty($errors)) {        
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users 
+            (name, email, password) 
+            VALUES (?, ?, ?)
+        ");
+
+        $stmt->execute([$name, $email, $hash]);
+
+        header("Location: login.php?registered=1");
+        exit();
+    }
 }
 
 $pageTitle = 'Registreren';
